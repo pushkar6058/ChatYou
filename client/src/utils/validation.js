@@ -1,8 +1,8 @@
 
 
-export const userNameValidator=(userName)=>{
+export const userNameValidator=(username)=>{
 
-    if(userName){
+    if(username){
         return {isValid:false,errorMessage:"Username is invalid"}
     }
 

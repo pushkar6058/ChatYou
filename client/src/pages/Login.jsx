@@ -9,33 +9,71 @@ import {
   IconButton,
 } from "@mui/material";
 import React, { useState } from "react";
+import {toast} from 'react-hot-toast'
 import { CameraAlt as CameraAltIcon } from "@mui/icons-material";
 import { VisuallyHiddenInput } from "../components/styles/StyledComponents";
-import {useFileHandler, useInputValidation, useStrongPassword} from "6pp";
+import { useFileHandler, useInputValidation, useStrongPassword } from "6pp";
 import { userNameValidator } from "../utils/validation";
+import axios from "axios";
+import { server } from "../constants/config";
+import { useDispatch } from "react-redux";
+import { userExists } from "../redux/reducers/auth";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const name=useInputValidation("");
-  const bio=useInputValidation("");
-  const userName=useInputValidation("",userNameValidator);
-  const password=useInputValidation("");
-  const avatar=useFileHandler("single");
-
-
+  const name = useInputValidation("");
+  const bio = useInputValidation("");
+  const userName = useInputValidation("", userNameValidator);
+  const password = useInputValidation("");
+  const avatar = useFileHandler("single");
+  const dispatch=useDispatch();
 
   const toggleLogin = () => {
     setIsLogin((e) => !e);
   };
 
-  const handleLogin=(e)=>{
+  const handleLogin = async (e) => {
     e.preventDefault();
-  }
+    const config = {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+    try {
+     const {data}= await axios.post(
+        `${server}/api/v1/user/login`,
+        {
+          username: userName.value,
+          password: password.value,
+        },
+        config
+      );
+      dispatch(userExists(true));
+      toast.success(data.message);
+    } 
+    catch (error) {
+      toast.error(error?.response?.data.message || "Something went wrong...");
+    }
+  };
 
-  const handleSignUp=(e)=>{
+  const handleSignUp = (e) => {
     e.preventDefault();
-  }
+    const formData=new FormData();
+    formData.append("avatar",avatar.file);
+    formData.append("name",name.value);
+    formData.append("bio",bio.value);
+    formData.append("username",userName.value);
+    formData.append("password",password.value);
 
+
+    try {
+      const {}=axios.post(`${server}/api/v1/user/new`,formData)
+    } catch (error) {
+      
+    }
+
+  };
 
   return (
     <Container
@@ -66,7 +104,6 @@ const Login = () => {
                 width: "100%",
                 marginTop: "1rem",
               }}
-
               onSubmit={handleLogin}
             >
               <TextField
@@ -135,8 +172,6 @@ const Login = () => {
                   src={avatar.preview}
                 />
 
-
-
                 <IconButton
                   sx={{
                     position: "absolute",
@@ -152,20 +187,24 @@ const Login = () => {
                 >
                   <>
                     <CameraAltIcon />
-                    <VisuallyHiddenInput type="file" onChange={avatar.changeHandler} />
+                    <VisuallyHiddenInput
+                      type="file"
+                      onChange={avatar.changeHandler}
+                    />
                   </>
                 </IconButton>
               </Stack>
-                {avatar.error && 
-              <Typography 
-              m={"1rem"}
-              width={"fit-content"}
-              display={"block"}
-              color="error" variant="caption">
-                {avatar.error}
-              </Typography>}
-
-
+              {avatar.error && (
+                <Typography
+                  m={"1rem"}
+                  width={"fit-content"}
+                  display={"block"}
+                  color="error"
+                  variant="caption"
+                >
+                  {avatar.error}
+                </Typography>
+              )}
 
               <TextField
                 id=""
@@ -188,10 +227,11 @@ const Login = () => {
                 variant="outlined"
               />
 
-              {userName.error && 
-              <Typography color="error" variant="caption">
-                {userName.error}
-              </Typography>}
+              {userName.error && (
+                <Typography color="error" variant="caption">
+                  {userName.error}
+                </Typography>
+              )}
 
               <TextField
                 id=""
@@ -214,8 +254,6 @@ const Login = () => {
                 margin="normal"
                 variant="outlined"
               />
-
-              
 
               <Button
                 variant="contained"

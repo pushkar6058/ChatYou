@@ -12,6 +12,7 @@ import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from './constants/events.js';
 import {v4 as uuid} from "uuid";
 import { getSockets } from './lib/helper.js';
 import { Message } from './models/message.js';
+import cors from "cors";
 
 
 
@@ -34,6 +35,12 @@ const app=express();
 const server=createServer(app);
 const io=new Server(server,{});
 
+app.use(cors({
+    origin:["http://localhost:5173","http://localhost:4173",process.env.CLIENT_URL],
+    credentials:true,
+    methods:['GET',"POST","PUT","DELETE"],
+}))
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -41,9 +48,9 @@ connectDb(mongoURI);
 
 
 
-app.use("/user",userRoute);
-app.use("/chat",chatRoute);
-app.use("/admin",adminRoute);
+app.use("/api/v1/user",userRoute);
+app.use("/api/v1/chat",chatRoute);
+app.use("/api/v1/admin",adminRoute);
 
 app.get("/",(req,res)=>{
     return res.send("Welcome to the home page");
