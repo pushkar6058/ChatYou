@@ -3,19 +3,26 @@ import { User } from "../models/user.js";
 import { Chat } from "../models/chat.js";
 import { Request } from "../models/request.js";
 
-import { cookieOptions, emitEvent, sendTokens } from "../utils/features.js";
+import { cookieOptions, emitEvent, sendTokens, uploadFilesToCloudinary } from "../utils/features.js";
 import { tryCatch } from "../middlewares/error.js";
 import { ErrorHandler } from "../utils/utility.js";
 import { NEW_REQUEST, REFETCH_CHATS } from "../constants/events.js";
 import { getOtherMember } from "../lib/helper.js";
 
-const newUser =tryCatch( async (req, res) => {
+const newUser =tryCatch( async (req, res,next) => {
   const { name, username, password, bio } = req.body;
+  const file=req.file;
+  if(!file){
+    console.log("Please attach file");
+    return next(new ErrorHandler("Please upload file...",400));
+    
+  }
+  const result= await uploadFilesToCloudinary([file]);
   const avatar = {
-    public_id: "fkge",
-    url: "fejefekj",
+    public_id: result[0].public_id,
+    url: result[0].url,
   };
-
+  // upload avatar to cloudinary
   const userCreated = await User.create({
     name: name,
     bio: bio,
@@ -45,12 +52,16 @@ const login = tryCatch(async (req, res, next) => {
 });
 
 const getMyProfile = tryCatch(async (req, res) => {
-  const user = await User.findById(req.user);
-
-  return res.status(200).json({
-    success: true,
-    user,
-  });
+  try {
+    const user = await User.findById(req.user);
+  
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 const logout = tryCatch(async (req, res) => {

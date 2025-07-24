@@ -1,4 +1,3 @@
-import { Chat } from "../models/chat.js";
 import { User } from "../models/user.js";
 import { faker, simpleFaker } from "@faker-js/faker";
 
@@ -28,7 +27,4 @@ const createSampleUser = async (numUsers) => {
   }
 };
 
-
-export { createSampleUser,
-     
-    };
+export { createSampleUser };

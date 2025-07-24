@@ -54,6 +54,7 @@ const ChatItem = ({
             }}
           />
         )}
+      
       </div>
     </Link>
   );

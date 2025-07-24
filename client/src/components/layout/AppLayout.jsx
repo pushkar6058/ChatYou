@@ -5,17 +5,31 @@ import ChatList from "../specific/ChatList";
 import { sampleChats } from "../../constants/sampleData";
 import { useParams } from "react-router-dom";
 import Profile from "../specific/Profile";
+import { useMyChatsQuery } from "../../redux/api/api";
+import { Drawer, Skeleton, Typography } from "@mui/material";
+import { useDispatch, useSelector } from "react-redux";
+import { setIsMobile } from "../../redux/reducers/misc";
+import { useErrors } from "../../hooks/hook";
 
-const AppLayout = () => (WrappedComponent) => {
-  return (props) => {
-    const params=useParams();
-    const chatId=params.chatId;
+// HOC that wraps a component with the layout
+const AppLayout = (WrappedComponent) => {
+  const Layout = (props) => {
+    const params = useParams();
+    const chatId = params.chatId;
+    const dispatch=useDispatch();
+    const {isMobile}=useSelector((state)=>state.misc);
+    const { isLoading, isError, error, data, refetch } = useMyChatsQuery("");
 
-    console.log(chatId);
+    useErrors([{isError,error}]);
+    
 
-    const handleDeleteChat=(e,_id,groupChat)=>{
+    const handleDeleteChat = (e, _id, groupChat) => {
       e.preventDefault();
-      console.log("delete Chat",_id,groupChat);
+      console.log("delete Chat", _id, groupChat);
+    };
+
+    const handleMobileClose=()=>{
+      dispatch(setIsMobile(false));
     }
 
     return (
@@ -23,30 +37,47 @@ const AppLayout = () => (WrappedComponent) => {
         <Title />
         <Header />
 
-        {/* Full height container */}
-        <div className="w-full h-[calc(100vh-4rem)] flex flex-row">
-          {/* Left Section — hidden on xs */}
-          <div className="hidden sm:block sm:w-1/3 md:w-1/4 h-full ">
+        {
+          isLoading ? <Skeleton/> :
+
+          <Drawer open={isMobile} onClose={handleMobileClose}>
+          
             <ChatList
-              chats={sampleChats}
+              w="70vw"
+              chats={data?.chats}
               chatId={chatId}
               handleDeleteChat={handleDeleteChat}
             />
+          </Drawer>
+        }
+
+        <div className="w-full h-[calc(100vh-4rem)] flex flex-row">
+          {/* Left Sidebar */}
+          <div className="hidden sm:block sm:w-1/3 md:w-1/4 h-full">
+           {
+            isLoading ? <Skeleton/> : <ChatList
+              chats={data?.chats}
+              chatId={chatId}
+              handleDeleteChat={handleDeleteChat}
+            />
+           }
           </div>
 
-          {/* Center Section — full width on xs, 8/12 on sm, 5/12 on md, 6/12 on lg */}
-          <div className="w-full sm:w-2/3 md:w-5/12 lg:w-1/2 h-full ">
+          {/* Center Content */}
+          <div className="w-full sm:w-2/3 md:w-5/12 lg:w-1/2 h-full">
             <WrappedComponent {...props} />
           </div>
 
-          {/* Right Section — hidden on xs and sm, visible md+ */}
-          <div className="hidden md:flex md:w-1/3 lg:w-1/4 h-full bg-neutral-700 p-8 flex justify-center ">
-            <Profile/>
+          {/* Right Sidebar */}
+          <div className="hidden md:flex md:w-1/3 lg:w-1/4 h-full bg-neutral-700 p-8 justify-center">
+            <Profile />
           </div>
         </div>
       </>
     );
   };
+
+  return Layout;
 };
 
 export default AppLayout;

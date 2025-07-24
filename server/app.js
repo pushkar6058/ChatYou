@@ -13,7 +13,8 @@ import {v4 as uuid} from "uuid";
 import { getSockets } from './lib/helper.js';
 import { Message } from './models/message.js';
 import cors from "cors";
-
+import {v2 as cloudinary} from "cloudinary"
+import { createGroupChats, createSampleMsg, createSingleChat } from './seeders/chat.js';
 
 
 dotenv.config({
@@ -30,7 +31,6 @@ const port=process.env.PORT || 3000;
 
 // middlewares are used here...
 
-
 const app=express();
 const server=createServer(app);
 const io=new Server(server,{});
@@ -44,8 +44,19 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-connectDb(mongoURI);
+try {
+     connectDb(mongoURI);
+} catch (error) {
+    console.log(error);
+}
 
+
+
+cloudinary.config({
+    cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:process.env.CLOUDINARY_API_KEY,
+    api_secret:process.env.CLOUDINARY_API_SECRET,
+})
 
 
 app.use("/api/v1/user",userRoute);
