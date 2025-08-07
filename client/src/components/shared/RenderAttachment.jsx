@@ -1,5 +1,5 @@
 import React from 'react'
-import { tranformImage } from '../../libs/features';
+import { transformImage } from '../../libs/features';
 import { FileOpen as FileOpenIcon } from '@mui/icons-material';
 
 const RenderAttachment = (file, url) => {
@@ -16,7 +16,7 @@ const RenderAttachment = (file, url) => {
            
 
         case "image":
-            return <img src={tranformImage(url)}
+            return <img src={transformImage(url)}
                 alt="Attachment" 
                 width={"200px"} 
                 height={"200px"} 

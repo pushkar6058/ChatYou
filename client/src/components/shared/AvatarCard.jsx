@@ -1,6 +1,6 @@
 import { Avatar, AvatarGroup, Box, Stack } from '@mui/material'
 import React from 'react'
-import {tranformImage} from "../../libs/features"
+import {transformImage} from "../../libs/features"
 
 const AvatarCard = ({avatar=[],max=4}) => {
   return (
@@ -14,7 +14,7 @@ const AvatarCard = ({avatar=[],max=4}) => {
             {avatar.map((i,index)=>(
             <Avatar 
                 key={Math.random() *100}
-                src={tranformImage(i)}
+                src={transformImage(i)}
                 alt={`Avatar ${index}`}
                 sx={{
                     width:"2rem",

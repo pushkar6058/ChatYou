@@ -7,11 +7,13 @@ import {
   CallToAction,
 } from "@mui/icons-material";
 import moment from "moment"
+import { transformImage } from "../../libs/features";
 
-const Profile = () => {
+const Profile = ({user}) => {
   return (
     <Stack spacing={"2rem"} direction={"column"} alignItems={"center"}>
       <Avatar
+      src={transformImage(user?.avatar?.url)}
         sx={{
           width: 200,
           height: 200,
@@ -20,13 +22,18 @@ const Profile = () => {
           border: "5px solid white",
         }}
       />
-      <ProfileCard heading={"Bio"} text={"ranefnei ve vkjebv vebn"} />
       <ProfileCard
         heading={"Username"}
-        text={"pushkar_bastara"}
+        text={user.username}
         Icon={<UserNameIcon />}
       />
-      <ProfileCard heading={"Joined"} text={moment("2025-06-27T17:31:04.023Z").fromNow()} Icon={<CalenderIcon />} />
+      <ProfileCard
+        heading={"Name"}
+        text={user.name}
+        Icon={<FaceIcon />}
+      />
+      <ProfileCard heading={"Bio"} text={user.bio} />
+      <ProfileCard heading={"Joined"} text={moment(user.createdAt).fromNow()} Icon={<CalenderIcon />} />
     </Stack>
   );
 };
@@ -45,7 +52,7 @@ const ProfileCard = ({ text, Icon, heading }) => (
       <Typography color={"gray"} variant="caption">
         {heading}
       </Typography>
-      <Typography variant="body1">{text}</Typography>
+      <Typography variant="body1" fontWeight="bold">{text}</Typography>
     </Stack>
   </Stack>
 );

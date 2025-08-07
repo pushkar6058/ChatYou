@@ -7,6 +7,7 @@ import { server } from './constants/config';
 import {useDispatch, useSelector} from "react-redux";
 import { userExists, userNotExists } from './redux/reducers/auth'
 import { Toaster } from 'react-hot-toast'
+import { SocketProvider } from './socket'
 
 const Home= lazy(()=>import("./pages/Home"))
 const Login= lazy(()=>import("./pages/Login"))
@@ -40,33 +41,47 @@ useEffect(()=>{
   return loader  ? <LayoutLoader/> :(
     <>
     <BrowserRouter>
-       <Suspense fallback={<LayoutLoader/>}>
-        <Routes>
-        <Route  path='/login' element={<ProtectRoute user={!user} redirect='/'>
-          <Login/>
-        </ProtectRoute>}/>
+  <Suspense fallback={<LayoutLoader />}>
+    <Routes>
 
-        
-        <Route element={<ProtectRoute user={user}/>}>
-          <Route  path='/' element={<Home/>}/>
-          <Route  path='/groups' element={<Groups/>}/>
-          <Route  path='/chat/:chatId' element={<Chat/>}/>
-        </Route>
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={
+          <ProtectRoute user={!user} redirect="/">
+            <Login />
+          </ProtectRoute>
+        }
+      />
 
-        <Route path='/admin' element={<AdminLogin/>}/>
-        <Route path='/admin/dashboard' element={<AdminDashboard/>}/>
-        <Route path='/admin/users' element={<UserManagment/>}/>
-        <Route path='/admin/chats' element={<ChatManagment/>}/>
-        <Route path='/admin/messages' element={<MessageManagment/>}/>
-        
+      {/* ✅ User Routes with SocketProvider */}
+      <Route
+        element={
+          <SocketProvider>
+            <ProtectRoute user={user} />
+          </SocketProvider>
+        }
+      >
+        <Route path="/" element={<Home />} />
+        <Route path="/groups" element={<Groups />} />
+        <Route path="/chat/:chatId" element={<Chat />} />
+      </Route>
 
-        <Route path='*' element={<NotFound/>}/>
-        
-       </Routes>
-       </Suspense>
-       <Toaster/>
-    
-    </BrowserRouter>
+      {/* 🚫 Admin Routes (No socket access) */}
+      <Route path="/admin" element={<AdminLogin />} />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<UserManagment />} />
+      <Route path="/admin/chats" element={<ChatManagment />} />
+      <Route path="/admin/messages" element={<MessageManagment />} />
+
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </Suspense>
+
+  <Toaster />
+</BrowserRouter>
+
     
     </>
   )

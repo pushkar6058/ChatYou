@@ -1,29 +1,48 @@
 import { Dialog, DialogTitle, Stack, TextField,InputAdornment,List} from '@mui/material'
 import {useInputValidation} from '6pp'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {Search as SearchIcon} from "@mui/icons-material"
 import UserItem from '../shared/UserItem'
-import { sampleUsers } from '../../constants/sampleData'
 import { useDispatch, useSelector } from 'react-redux'
 import { setIsSearch } from '../../redux/reducers/misc'
+import { useLazySearchUserQuery, useSendFriendRequestMutation } from '../../redux/api/api';
+import {toast} from "react-hot-toast"
+import { useAsyncMutation } from '../../hooks/hook'
 
 
 const Search = () => {
 
   const {isSearch}=useSelector((state)=>state.misc);
+  const [searchUser]=useLazySearchUserQuery();
+  const [sendFriendRequest,isLoadingSendFriendRequest]=useAsyncMutation(useSendFriendRequestMutation);
   const dispatch=useDispatch();
   const search=useInputValidation("");
 
-  const [users,setUsers]=useState(sampleUsers);
-  let isLoadingSendFriendRequest=false;
+  const [users,setUsers]=useState([]);
 
-  const addFriendHandler=(id)=>{
-    console.log(id);
+
+  const addFriendHandler=async(id)=>{
+    await sendFriendRequest("Sending Friend Request",{userId:id});
   }
+  
   const searchCloseHandler=()=>{
     dispatch(setIsSearch(false));
   }
 
+ useEffect(() => {
+  const timeOutId = setTimeout(() => {
+    if (search.value?.trim()) {
+      searchUser({ name: search.value })
+        .then(({ data }) =>{
+         setUsers(data.users);
+          
+        })
+        .catch((err) => console.error(err));
+    }
+  }, 1000);
+
+  return () => clearTimeout(timeOutId);
+}, [search.value]);
   
   
   return (
@@ -48,9 +67,9 @@ const Search = () => {
       />
 
       <List>
-        {users.map((i)=>{
+        {users.length >0 ?users?.map((i)=>{
           return <UserItem user={i} key={i._id} handler={addFriendHandler} handlerIsLoading={isLoadingSendFriendRequest} />
-        })}
+        }) : <div className='text-center text-gray-400'>No matching users</div>}
       </List>
       </Stack>
     </Dialog>

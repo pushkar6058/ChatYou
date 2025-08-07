@@ -3,7 +3,8 @@ const msgSchema= new Schema({
 
     content:{
         type:String,
-        attachments:[
+    },
+    attachments:[
             {
                 public_id:{
                     type:String,
@@ -14,8 +15,7 @@ const msgSchema= new Schema({
                     required:true,
                 }
             }
-        ]
-    },
+        ],
 
     sender:{
         type:Types.ObjectId,

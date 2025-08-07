@@ -8,6 +8,7 @@ import { tryCatch } from "../middlewares/error.js";
 import { ErrorHandler } from "../utils/utility.js";
 import { NEW_REQUEST, REFETCH_CHATS } from "../constants/events.js";
 import { getOtherMember } from "../lib/helper.js";
+import { Types } from "mongoose";
 
 const newUser =tryCatch( async (req, res,next) => {
   const { name, username, password, bio } = req.body;
@@ -74,38 +75,172 @@ const logout = tryCatch(async (req, res) => {
     });
 });
 
-const searchUser = tryCatch(async (req, res) => {
-  const { name } = req.query;
+// const searchUser = tryCatch(async (req, res) => {
+//   const searchName = req.query.name || "";
 
-  // finding all myChats
+//   // Step 1: Get all 1-to-1 chats
+//   const myChats = await Chat.find({
+//     groupChat: false,
+//     members: req.user,
+//   }).select("members");
 
-  const myChats = await Chat.find({
+//   // Step 2: Extract friend IDs
+//   const friendIds = new Set();
+//   myChats.forEach(chat => {
+//     chat.members.forEach(memberId => {
+//       if (memberId.toString() !== req.user.toString()) {
+//         friendIds.add(memberId.toString());
+//       }
+//     });
+//   });
+
+//   // Step 3: Find users not in chats and matching name
+//   const users = await User.find({
+//     _id: {
+//       $ne: req.user,
+//       $nin: Array.from(friendIds)
+//     },
+//     name: { $regex: searchName, $options: "i" },
+//   }).select("name avatar");
+//   const formattedUsers = users.map(({ _id, name, avatar }) => ({
+//     _id,
+//     name,
+//     avatar: avatar?.url || "",
+//   }));
+
+//   res.status(200).json({
+//     success: true,
+//     formattedUsers
+//   });
+// });
+
+
+// const searchUser = tryCatch(async (req, res) => {
+//   const { name = "" } = req.query;
+
+//   // Step 1: Get all 1-to-1 (non-group) chats for current user
+//   const myChats = await Chat.find({
+//     groupChat: false,
+//     members: req.user,
+//   });
+
+//   // Step 2: Extract all members from these chats
+//   const allUsersFromMyChats = myChats.flatMap(chat =>
+//     chat.members.map(member => member.toString())
+//   );
+
+//   // Step 3: Create a Set of IDs to exclude (friends + self)
+//   const exclusionSet = new Set([...allUsersFromMyChats, req.user.toString()]);
+
+
+//   // Step 4: Find users not in the exclusion list and matching the name
+//   const users = await User.find({
+//     _id: { $nin: Array.from(exclusionSet) },
+//     name: { $regex: name, $options: "i" },
+//   });
+  
+ 
+
+//   // Step 5: Format the output
+//   const formattedUsers = users.map(({ _id, name, avatar }) => ({
+//     _id,
+//     name,
+//     avatar: avatar?.url || "",
+//   }));
+  
+
+//   return res.status(200).json({
+//     success: true,
+//     users: formattedUsers,
+//   });
+// });
+
+
+const searchUser = tryCatch(async (req, res, next) => { // Added 'next' for error handling if tryCatch uses it
+  try {
+    const { name = "" } = req.query;
+  const userId = req.user; // Assuming req.user contains the ObjectId of the current user
+
+  // 1. Get all one-on-one chats where the current user is a member.
+  // We only need the 'members' field.
+  const myOneOnOneChats = await Chat.find({
     groupChat: false,
-    members: req.user,
-  });
+    members: userId,
+  }).select("members");
 
-  // all users from my chats means my friends or people i have chatted with
-  const allUsersFromMyChats = myChats.flatMap((chat) => chat.members);
+  // 2. Extract the IDs of all users (friends) the current user has already chatted with.
+  // Crucially, filter out the current user's own ID from each chat's members array.
+  const chattedUserIds = myOneOnOneChats.flatMap((chat) =>
+    chat.members.filter((memberId) => !memberId.equals(userId))
+  );
 
-  // finding all users except me and myFriends
-  const allUsersExceptMeAndFriends = await User.find({
-    _id: { $nin: allUsersFromMyChats },
-    name: { $regex: name, $options: "i" },
-  });
+  // 3. Create a comprehensive list of user IDs to exclude from the search.
+  // This list includes:
+  //    a) The current user's ID (to prevent searching for themselves).
+  //    b) All users already chatted with.
+  // Use a Set to ensure uniqueness and efficient lookup, then convert back to array.
+  const excludeUserIds = [...new Set([...chattedUserIds, new Types.ObjectId(userId)])];
+  // Note: Using new Types.ObjectId(userId) to ensure userId is a proper ObjectId
+  // for robust comparison, especially if req.user comes as a string.
 
-  const users = allUsersExceptMeAndFriends.map(({ _id, name, avatar }) => ({
+  // 4. Search for users who are NOT in the exclude list and whose name matches the query.
+  const users = await User.find({
+    _id: { $nin: excludeUserIds }, // Exclude current user and already chatted users
+    name: { $regex: name, $options: "i" }, // Case-insensitive partial name match
+  }).select("_id name avatar"); // Select only necessary fields for performance
+
+  // 5. Format the results for the frontend.
+  const formattedUsers = users.map(({ _id, name, avatar }) => ({
     _id,
     name,
-    avatar: avatar.url,
+    avatar: avatar.url, // Assuming avatar is an object with a 'url' property
   }));
 
-  // i need to find out the chats in
-  // which i am member and it is not a groupChat
   return res.status(200).json({
     success: true,
-    users,
+    users: formattedUsers,
   });
+  } catch (error) {
+    console.log(error);
+  }
 });
+
+
+
+
+// const searchUser = tryCatch(async (req, res) => {
+//   const { name="" } = req.query;
+
+//   // Get all chats where user is a member
+//   const myChats = await Chat.find({
+//     groupChat: false,
+//     members: req.user,
+//   });
+
+//   // Extract friend IDs (excluding self)
+//   const allUsersFromMyChats = myChats
+//     .flatMap((chat) => chat.members);
+
+//   // Exclude self and already chatted users
+//   const allUsersExceptMeAndFriends = await User.find({
+//     _id: { $nin: [...allUsersFromMyChats, req.user] },
+//     name: { $regex: name, $options: "i" },
+//   });
+
+//   const users = allUsersExceptMeAndFriends.map(({ _id, name, avatar }) => ({
+//     _id,
+//     name,
+//     avatar: avatar.url,
+//   }));
+
+//   return res.status(200).json({
+//     success: true,
+//     users,
+//   });
+// });
+
+
+
 
 const sendFriendRequest = tryCatch(async (req, res, next) => {
   const { userId } = req.body;

@@ -8,13 +8,16 @@ import chatRoute from './routes/chat.js';
 import { adminRoute } from './routes/admin.js';
 import {Server} from "socket.io";
 import { createServer } from 'http';
-import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from './constants/events.js';
+import { NEW_MESSAGE, NEW_MESSAGE_ALERT, START_TYPING, STOP_TYPING } from './constants/events.js';
 import {v4 as uuid} from "uuid";
 import { getSockets } from './lib/helper.js';
 import { Message } from './models/message.js';
 import cors from "cors";
 import {v2 as cloudinary} from "cloudinary"
-import { createGroupChats, createSampleMsg, createSingleChat } from './seeders/chat.js';
+import { corsOptions } from './constants/config.js';
+import { socketAuthenticator } from './middlewares/auth.js';
+import { createSampleUser } from './seeders/user.js';
+
 
 
 dotenv.config({
@@ -33,22 +36,26 @@ const port=process.env.PORT || 3000;
 
 const app=express();
 const server=createServer(app);
-const io=new Server(server,{});
+const io=new Server(server,{
+    cors:corsOptions,
+});
 
-app.use(cors({
-    origin:["http://localhost:5173","http://localhost:4173",process.env.CLIENT_URL],
-    credentials:true,
-    methods:['GET',"POST","PUT","DELETE"],
-}))
+app.set("io",io);
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
 
-try {
-     connectDb(mongoURI);
-} catch (error) {
-    console.log(error);
-}
+(async () => {
+  try {
+    await connectDb(process.env.MONGO_URI);
+  } catch (error) {
+    console.error("MongoDB connection failed", error);
+  }
+})();
+
+
 
 
 
@@ -68,18 +75,14 @@ app.get("/",(req,res)=>{
 });
 
 io.use((socket,next)=>{
-    
+    cookieParser()(socket.request,socket.request.res,async(err)=> await socketAuthenticator(err,socket,next))
 })
 
 io.on("connection",(socket)=>{
 
-    const tempUser={
-        _id:"fenj",
-        name:"rengjbiebg",
-
-    };
-
-    userSocketIds.set(tempUser._id.toString(),socket.id);
+    const user=socket.user;
+    
+    userSocketIds.set(user._id.toString(),socket.id);
     console.log("a user connected",socket.id);
     console.log(userSocketIds);
 
@@ -89,8 +92,8 @@ io.on("connection",(socket)=>{
             content:message,
             _id:uuid(),
             sender:{
-                _id:tempUser._id,
-                name:tempUser.name,
+                _id:user._id,
+                name:user.name,
             },
             members:members,
             chat:chatId,
@@ -98,10 +101,11 @@ io.on("connection",(socket)=>{
         }
         const messageForDb={
             content:message,
-            sender:tempUser._id,
+            sender:user._id,
             chat:chatId,
             
         }
+        
 
         const usersSocket = getSockets(members);
 
@@ -122,8 +126,23 @@ io.on("connection",(socket)=>{
         }
     })
 
+    socket.on(START_TYPING,({members,chatId})=>{
+        console.log("Typingg...",chatId);
+        const userSocketIds=getSockets(members);
+
+        socket.to(userSocketIds).emit(START_TYPING,{chatId});
+        
+    })
+
+    socket.on(STOP_TYPING,({members,chatId})=>{
+        console.log("Stopped typing",chatId);
+        const userSocketIds=getSockets(members);
+        socket.to(userSocketIds).emit(STOP_TYPING,{chatId});
+        
+    });
+
     socket.on("disconnect",()=>{
-        userSocketIds.delete(tempUser._id.toString());
+        userSocketIds.delete(user._id.toString());
         console.log("user disconnected");
     })
 })

@@ -23,7 +23,7 @@ import { server } from "../../constants/config";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { userNotExists } from "../../redux/reducers/auth";
-import { setIsMobile, setIsSearch } from "../../redux/reducers/misc";
+import { setIsMobile, setIsNotification, setIsSearch } from "../../redux/reducers/misc";
 
 const SearchDialog= lazy(()=>import("../specific/Search"))
 const NotificationDialog= lazy(()=>import("../specific/Notifications"))
@@ -32,13 +32,13 @@ const NewGroupDialog=lazy(()=>import("../specific/NewGroup"))
 const Header = () => {
   const navigate = useNavigate();
   const dispatch=useDispatch();
-  const {isSearch}=useSelector((state)=>state.misc);
+  
+  const {isSearch,isNotification}=useSelector((state)=>state.misc);
   
   const [isNewGroup, setIsNewGroup] = useState(false);
-  const [isNotification, setIsNotification] =  useState(false);
 
   const handleMobile = () => {
-    console.log("mobile");
+    // console.log("mobile");
     dispatch(setIsMobile(true));
   };
 
@@ -49,7 +49,7 @@ const Header = () => {
     setIsNewGroup((prev) => !prev);
   };
   const openNotification = () => {
-    setIsNotification((prev) => !prev);
+    dispatch(setIsNotification(true));
   };
 
   const navigateToGroups = () => {
@@ -131,8 +131,6 @@ const Header = () => {
           </Toolbar>
         </AppBar>
       </Box>
-
-
 
 
       {isSearch && (

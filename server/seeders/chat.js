@@ -38,30 +38,29 @@ const createGroupChats = async (chatCount) => {
 
     for (let i = 0; i < chatCount; i++) {
       const numMembers = simpleFaker.number.int({ min: 3, max: users.length });
-      const members = [];
 
-      for (let i = 0; i < numMembers; i++) {
+      const members = new Set();
+
+      while (members.size < numMembers) {
         const randomIdx = Math.floor(Math.random() * users.length);
-        const randomUser = users[randomIdx];
-
-        if (!members.includes(randomUser)) {
-          members.push(randomUser);
-        }
-
-        const chat = Chat.create({
-          groupChat: true,
-          name: faker.lorem.words(1),
-          members,
-          creator: members[0],
-        });
-
-        chatsPromise.push(chat);
+        members.add(users[randomIdx]._id.toString());
       }
 
+      const membersArray = Array.from(members);
+
+      const chatPromise = Chat.create({
+        groupChat: true,
+        name: faker.lorem.words(1),
+        members: membersArray,
+        creator: membersArray[0],
+      });
+
+      chatsPromise.push(chatPromise);
     }
+
     await Promise.all(chatsPromise);
 
-    console.log("groupChats created successfully");
+    console.log("Group chats created successfully");
     process.exit();
     
   } catch (err) {
@@ -69,6 +68,47 @@ const createGroupChats = async (chatCount) => {
     process.exit(1);
   }
 };
+
+
+// const createGroupChats = async (chatCount) => {
+//   try {
+//     const users = await User.find().select("_id");
+
+//     const chatsPromise = [];
+
+//     for (let i = 0; i < chatCount; i++) {
+//       const numMembers = simpleFaker.number.int({ min: 3, max: users.length });
+//       const members = [];
+
+//       for (let i = 0; i < numMembers; i++) {
+//         const randomIdx = Math.floor(Math.random() * users.length);
+//         const randomUser = users[randomIdx];
+
+//         if (!members.includes(randomUser)) {
+//           members.push(randomUser);
+//         }
+
+//         const chat = Chat.create({
+//           groupChat: true,
+//           name: faker.lorem.words(1),
+//           members,
+//           creator: members[0],
+//         });
+
+//         chatsPromise.push(chat);
+//       }
+
+//     }
+//     await Promise.all(chatsPromise);
+
+//     console.log("groupChats created successfully");
+//     process.exit();
+    
+//   } catch (err) {
+//     console.error(err);
+//     process.exit(1);
+//   }
+// };
 
 const createSampleMsg = async (numMsgs) => {
   try {

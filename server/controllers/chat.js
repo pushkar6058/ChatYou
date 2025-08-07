@@ -1,6 +1,6 @@
 import {
   ALERT,
-  NEW_ATTACHMENT,
+  NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   REFETCH_CHATS,
 } from "../constants/events.js";
@@ -8,7 +8,7 @@ import { getOtherMember } from "../lib/helper.js";
 import { tryCatch } from "../middlewares/error.js";
 import { Chat } from "../models/chat.js";
 import { User } from "../models/user.js";
-import { deleteFilesFromCloudinary, emitEvent } from "../utils/features.js";
+import { deleteFilesFromCloudinary, emitEvent, uploadFilesToCloudinary } from "../utils/features.js";
 import { ErrorHandler } from "../utils/utility.js";
 import { Message } from "../models/message.js";
 
@@ -215,18 +215,14 @@ const leaveGroup = tryCatch(async (req, res, next) => {
 
 const sendAttachments = tryCatch(async (req, res, next) => {
   const { chatId } = req.body;
+  const files = req.files || [];
 
-  const attachedFiles=req.files;
-  if(!attachedFiles){
-    return next(new ErrorHandler("Please upload attachments",400));
+  // Validate file count
+  if (files.length < 1 || files.length > 5) {
+    return next(new ErrorHandler("Attachments must be 1-5", 400));
   }
 
-  if(attachedFiles.length>5 || attachedFiles<1){
-    return next(new ErrorHandler("attachments must be 1-5",400));
-  }
-
-
-
+  // Fetch chat & user
   const [chat, me] = await Promise.all([
     Chat.findById(chatId),
     User.findById(req.user, "name"),
@@ -235,51 +231,48 @@ const sendAttachments = tryCatch(async (req, res, next) => {
   if (!chat) {
     return next(new ErrorHandler("Chat not found", 404));
   }
-  const files = req.files || [];
 
-  if (files.length < 1) {
-    return next(new ErrorHandler("Provide attachments", 400));
-  }
+  // Upload files to Cloudinary
+    const attachments = await uploadFilesToCloudinary(files);
+ 
+  
 
-  const attachments = [];
-
+  // Create message
   const messageForDb = {
     content: "",
-    attachments: attachments,
+    attachments,
     sender: me._id,
     chat: chatId,
   };
 
+
+
   const messageForRealTime = {
     content: "",
-    attachments: attachments,
+    attachments,
+    chat: chatId,
     sender: {
       _id: me._id,
       name: me.name,
     },
-    chat: chatId,
   };
 
-  const message = await Message.create({
-    messageForDb,
-  });
+  const message = await Message.create(messageForDb);
 
-  // upload files here
-
-  emitEvent(req, NEW_ATTACHMENT, chat.members, {
+  // Emit socket events
+  emitEvent(req, NEW_MESSAGE, chat.members, {
     message: messageForRealTime,
     chatId,
   });
 
-  emitEvent(req, NEW_MESSAGE_ALERT, chat.members, {
-    chatId,
-  });
+  emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId });
 
   return res.status(200).json({
     success: true,
     message,
   });
 });
+
 
 const getChatDetails = tryCatch(async (req, res, next) => {
 
